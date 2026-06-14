@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "441548217901",
+    "project_id": "al-fajar-pass",
+    "storage_bucket": "al-fajar-pass.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:441548217901:android:6b09d5b2985a7c2b42e2a4",
+        "android_client_info": {
+          "package_name": "com.lexera.Fajarpass"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAbyMeF0yUNA_slnbVl2lB0bms_UuG1io"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

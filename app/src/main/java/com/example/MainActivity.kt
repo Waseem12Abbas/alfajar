@@ -70,6 +70,13 @@ class MainActivity : ComponentActivity() {
         }
 
         enableEdgeToEdge()
+
+        try {
+            com.example.core.sync.FirebaseRealtimeListener.startListening(applicationContext)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to start Firestore snapshot listener", e)
+        }
+
         setContent {
             MyApplicationTheme {
                 var appState by remember { mutableStateOf<AppState>(AppState.Loading) }
@@ -230,6 +237,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            com.example.core.sync.FirebaseRealtimeListener.stopListening()
+        } catch (e: Exception) {
+            // ignore
         }
     }
 }

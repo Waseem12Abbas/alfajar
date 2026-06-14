@@ -34,7 +34,7 @@ fun AdminDashboard(
 
     // Run autokick sync on startup if configured
     LaunchedEffect(Unit) {
-        if (!secureStorage.getSupabaseUrl().isNullOrEmpty() && !secureStorage.getSupabaseAnonKey().isNullOrEmpty()) {
+        if (!secureStorage.getFirebaseProjectId().isNullOrEmpty()) {
             isSyncingNow = true
             SupabaseSyncService.sync(context)
             isSyncingNow = false

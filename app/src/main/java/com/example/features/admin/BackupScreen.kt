@@ -40,8 +40,9 @@ fun BackupScreen() {
     val db = remember { AppDatabase.getDatabase(context) }
 
     val secureStorage = remember { SecureStorageService(context) }
-    var supabaseUrl by remember { mutableStateOf(secureStorage.getSupabaseUrl() ?: "") }
-    var supabaseKey by remember { mutableStateOf(secureStorage.getSupabaseAnonKey() ?: "") }
+    var firebaseProjectId by remember { mutableStateOf(secureStorage.getFirebaseProjectId() ?: "") }
+    var firebaseApiKey by remember { mutableStateOf(secureStorage.getFirebaseApiKey() ?: "") }
+    var firebaseAppId by remember { mutableStateOf(secureStorage.getFirebaseAppId() ?: "") }
     var isSyncingNow by remember { mutableStateOf(false) }
     var lastSyncStamp by remember { mutableStateOf(secureStorage.getLastSyncTime()) }
 
@@ -88,7 +89,7 @@ fun BackupScreen() {
             }
         }
 
-        // Supabase Sync Section
+        // Firebase DB Sync Section
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -105,7 +106,7 @@ fun BackupScreen() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "سپابیس کلاؤڈ سنکرونائزیشن | Cloud Sync",
+                        text = "گوگل فائر بیس سنکرونائزیشن | Firebase Sync",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF0F172A)
@@ -127,16 +128,16 @@ fun BackupScreen() {
                 }
 
                 Text(
-                    text = "ڈیٹا کو آن لائن سنکرونائز کرنے کے لیے اپنے سپابیس کلاؤڈ کی تفصیلات درج کریں۔ اور پش / پل ایکشن کے ذریعے تمام ڈیوائسز برابر رکھیں۔",
+                    text = "ڈیٹا کو آن لائن سنکرونائز کرنے کے لیے اپنے Google Firebase کلاؤڈ ڈیٹا بیس کی تفصیلات درج کریں۔ اور پش / پل ایکشن کے ذریعے تمام ڈیوائسز برابر رکھیں۔",
                     fontSize = 13.sp,
                     color = Color(0xFF475569)
                 )
 
                 OutlinedTextField(
-                    value = supabaseUrl,
-                    onValueChange = { supabaseUrl = it },
-                    label = { Text("Supabase URL (https://...)") },
-                    placeholder = { Text("https://your-project.supabase.co") },
+                    value = firebaseProjectId,
+                    onValueChange = { firebaseProjectId = it },
+                    label = { Text("Firebase Project ID") },
+                    placeholder = { Text("pakpass-firebase-12345") },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -150,10 +151,27 @@ fun BackupScreen() {
                 )
 
                 OutlinedTextField(
-                    value = supabaseKey,
-                    onValueChange = { supabaseKey = it },
-                    label = { Text("Supabase Anon Key") },
-                    placeholder = { Text("your-anon-or-project-api-key") },
+                    value = firebaseApiKey,
+                    onValueChange = { firebaseApiKey = it },
+                    label = { Text("Firebase Web API Key") },
+                    placeholder = { Text("AIzaSyD9x8...") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = Color(0xFF005129),
+                        unfocusedBorderColor = Color(0xFFCBD5E1),
+                        focusedLabelColor = Color(0xFF005129),
+                        unfocusedLabelColor = Color(0xFF475569)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = firebaseAppId,
+                    onValueChange = { firebaseAppId = it },
+                    label = { Text("Firebase Application ID") },
+                    placeholder = { Text("1:1234567890:android:abcdef0123...") },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -172,12 +190,22 @@ fun BackupScreen() {
                 ) {
                     Button(
                         onClick = {
-                            if (supabaseUrl.trim().isEmpty() || supabaseKey.trim().isEmpty()) {
-                                Toast.makeText(context, "براہ کرم سپابیس کی معلومات مکمل درج کریں | Enter URL & Key", Toast.LENGTH_SHORT).show()
+                            if (firebaseProjectId.trim().isEmpty() || firebaseApiKey.trim().isEmpty() || firebaseAppId.trim().isEmpty()) {
+                                Toast.makeText(context, "براہ کرم فائر بیس کی تفصیلات مکمل درج کریں | Enter full credentials", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
-                            secureStorage.setSupabaseUrl(supabaseUrl.trim())
-                            secureStorage.setSupabaseAnonKey(supabaseKey.trim())
+                            secureStorage.setFirebaseProjectId(firebaseProjectId.trim())
+                            secureStorage.setFirebaseApiKey(firebaseApiKey.trim())
+                            secureStorage.setFirebaseAppId(firebaseAppId.trim())
+                            
+                            // Re-init listener on successful configuration save
+                            try {
+                                com.example.core.sync.FirebaseRealtimeListener.stopListening()
+                                com.example.core.sync.FirebaseRealtimeListener.startListening(context)
+                            } catch (e: Exception) {
+                                // ignore
+                            }
+                            
                             Toast.makeText(context, "سیٹنگز محفوظ ہو گئیں! Setup saved.", Toast.LENGTH_SHORT).show()
                         },
                         shape = RoundedCornerShape(24.dp),
@@ -191,14 +219,14 @@ fun BackupScreen() {
 
                     Button(
                         onClick = {
-                            if (supabaseUrl.trim().isEmpty() || supabaseKey.trim().isEmpty()) {
+                            if (firebaseProjectId.trim().isEmpty() || firebaseApiKey.trim().isEmpty() || firebaseAppId.trim().isEmpty()) {
                                 Toast.makeText(context, "پہلے سسٹم سیٹنگز محفوظ کریں! Save settings first.", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
                             
-                            // Autocommit settings
-                            secureStorage.setSupabaseUrl(supabaseUrl.trim())
-                            secureStorage.setSupabaseAnonKey(supabaseKey.trim())
+                            secureStorage.setFirebaseProjectId(firebaseProjectId.trim())
+                            secureStorage.setFirebaseApiKey(firebaseApiKey.trim())
+                            secureStorage.setFirebaseAppId(firebaseAppId.trim())
 
                             scope.launch {
                                 isSyncingNow = true

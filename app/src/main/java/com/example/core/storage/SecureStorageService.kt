@@ -149,6 +149,40 @@ class SecureStorageService(private val context: Context) {
         prefs.edit().putString("supabase_anon_key", key.trim()).apply()
     }
 
+    fun getNeonConnectionString(): String? {
+        return prefs.getString("neon_conn_string", null) ?: getSupabaseUrl() // Fallback to supabase url if stored there before
+    }
+
+    fun setNeonConnectionString(connStr: String) {
+        prefs.edit().putString("neon_conn_string", connStr.trim()).apply()
+        // Save to supabaseUrl is also fine so fallback works
+        prefs.edit().putString("supabase_url", connStr.trim()).apply()
+    }
+
+    fun getFirebaseProjectId(): String? {
+        return prefs.getString("firebase_project_id", null)
+    }
+
+    fun setFirebaseProjectId(id: String) {
+        prefs.edit().putString("firebase_project_id", id.trim()).apply()
+    }
+
+    fun getFirebaseApiKey(): String? {
+        return prefs.getString("firebase_api_key", null)
+    }
+
+    fun setFirebaseApiKey(key: String) {
+        prefs.edit().putString("firebase_api_key", key.trim()).apply()
+    }
+
+    fun getFirebaseAppId(): String? {
+        return prefs.getString("firebase_app_id", null)
+    }
+
+    fun setFirebaseAppId(id: String) {
+        prefs.edit().putString("firebase_app_id", id.trim()).apply()
+    }
+
     fun getLastSyncTime(): String {
         return prefs.getString("last_sync_time", "2020-01-01T00:00:00Z") ?: "2020-01-01T00:00:00Z"
     }

@@ -12,7 +12,7 @@ android {
 
   defaultConfig {
     applicationId = "com.example"
-    minSdk = 24
+    minSdk = 26
     targetSdk = 36
     versionCode = 1
     versionName = "1.0"
@@ -70,6 +70,7 @@ secrets {
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
   implementation(platform(libs.firebase.bom))
+  implementation("com.google.firebase:firebase-firestore")
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.camera.camera2)
@@ -92,6 +93,7 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   implementation(libs.zxing.core)
   implementation(libs.androidx.work.runtime.ktx)
+  // implementation("org.postgresql:postgresql:42.7.2")
   // implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   // implementation(libs.firebase.ai)
