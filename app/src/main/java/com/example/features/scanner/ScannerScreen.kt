@@ -717,6 +717,7 @@ fun ScannerScreen(
 }
 
 // 100% offline AES Decryption and validation flow!
+// 100% offline AES Decryption and validation flow!
 private suspend fun validateQrPayload(
     rawQrText: String,
     secureStorageService: SecureStorageService,
@@ -724,39 +725,79 @@ private suspend fun validateQrPayload(
     onResult: (ValidationResult) -> Unit
 ) {
     try {
+        // Defensive String Sanitization: Trim input raw payload to eliminate hidden formatting or whitespaces
+        val cleanScannedId = rawQrText.trim()
+
         val key = secureStorageService.getStoredKey()
         if (key == null) {
             onResult(ValidationResult.Failure("مذکورہ چابی غائب ہے", "AES Key generation / retrieval failed"))
             return
         }
 
-        // Decrypt the payload
+        // Decrypt the payload with support for both primary and static fallback keys
         val decryptedJsonStr = try {
-            EncryptionService.decrypt(rawQrText, key)
+            EncryptionService.decrypt(cleanScannedId, key)
         } catch (e: Exception) {
-            e.printStackTrace()
-            // Decryption failure means forgery!
-            onResult(ValidationResult.Failure("غیر معتبر پاس - جعلی پاس", "INVALID - Forged / Corrupted Pass"))
-            return
+            Log.w("ScannerScreen", "Primary decryption failed. Attempting fallback master key...", e)
+            try {
+                val fallbackKey = secureStorageService.getFallbackKey()
+                EncryptionService.decrypt(cleanScannedId, fallbackKey)
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+                // If both key attempts fail, mark the QR payload as invalid/forged
+                onResult(ValidationResult.Failure("غیر معتبر پاس - جعلی پاس", "INVALID - Decryption Failed / Forged Pass"))
+                return
+            }
         }
 
         val json = JSONObject(decryptedJsonStr)
-        val uid = json.getString("uid")
-        val name = json.getString("name")
-        val cnic = json.getString("cnic")
-        val veh = json.getString("veh")
-        val exp = json.getString("exp")
-        val issued = json.getString("issued")
+        val uid = json.getString("uid").trim() // Trim UID parsed from payload as well
+        val name = json.getString("name").trim()
+        val cnic = json.getString("cnic").trim()
+        val veh = json.getString("veh").trim()
+        val exp = json.getString("exp").trim()
+        val issued = json.getString("issued").trim()
 
-        // 1. Verify Expiry date with today
-        val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-        if (exp < todayStr) {
-            onResult(ValidationResult.Failure("میعاد ختم - غیر فعال", "EXPIRED - Pass has expired"))
-            return
+        // 1. Verify Expiry date with robust 5-minute clock drift margin check
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val expiryDateObj = try {
+            sdf.parse(exp)
+        } catch (e: Exception) {
+            null
+        }
+
+        if (expiryDateObj != null) {
+            // Setup calendar to represent the absolute end of the expiry day (23:59:59.999)
+            val cal = Calendar.getInstance().apply {
+                time = expiryDateObj
+                set(Calendar.HOUR_OF_DAY, 23)
+                set(Calendar.MINUTE, 59)
+                set(Calendar.SECOND, 59)
+                set(Calendar.MILLISECOND, 999)
+            }
+            val expiryTimeMs = cal.timeInMillis
+            // Deduct a 5-minute drift buffer (300,000 ms) from current system time
+            // to prevent false-negatives due to minor time variations between device clocks
+            val currentTimeWithDriftMs = System.currentTimeMillis() - (5 * 60 * 1000)
+            if (currentTimeWithDriftMs > expiryTimeMs) {
+                onResult(ValidationResult.Failure("میعاد ختم - غیر فعال", "EXPIRED - Pass has expired"))
+                return
+            }
+        } else {
+            // Strict lexicographical comparison fallback if date parsing fails
+            val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+            if (exp < todayStr) {
+                onResult(ValidationResult.Failure("میعاد ختم - غیر فعال", "EXPIRED - Pass has expired"))
+                return
+            }
         }
 
         // 2. Query Local SQLite Table to check if marked as revoked
+        // Sanitize the UID string prior to making the database query
         val passInDb = db.vehiclePassDao().getPassByUniqueId(uid)
+        
+        // Defensive revocation check: explicitly check for the value 1 (revoked).
+        // A value of 0, null, or any other integer represents a valid active pass.
         if (passInDb != null && passInDb.is_revoked == 1) {
             onResult(ValidationResult.Failure("منسوخ شدہ پاس - غیر فعال", "REVOKED - Pass manually revoked by Admin"))
             return
