@@ -1,0 +1,6 @@
+{
+  "name": "AL-FAJAR VEHICLE PASS",
+  "description": "100% offline vehicle registration and QR-based verification app for Android with secure hardware-backed AES-256 encryption.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
